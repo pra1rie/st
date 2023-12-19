@@ -34,6 +34,7 @@ typedef struct {
 	void (*func)(const Arg *);
 	const Arg arg;
 	uint  release;
+	int  altscrn;  /* 0: don't care, -1: not alt screen, 1: alt screen */
 } MouseShortcut;
 
 typedef struct {
@@ -455,6 +456,7 @@ mouseaction(XEvent *e, uint release)
 	for (ms = mshortcuts; ms < mshortcuts + LEN(mshortcuts); ms++) {
 		if (ms->release == release &&
 		    ms->button == e->xbutton.button &&
+		    (!ms->altscrn || (ms->altscrn == (tisaltscr() ? 1 : -1))) &&
 		    (match(ms->mod, state) ||  /* exact or forced */
 		     match(ms->mod, state & ~forcemousemod))) {
 			ms->func(&(ms->arg));
@@ -818,7 +820,7 @@ xloadcols(void)
 int
 xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b)
 {
-	if (!BETWEEN(x, 0, dc.collen - 1))
+	if (!BETWEEN(x, 0, dc.collen))
 		return 1;
 
 	*r = dc.col[x].color.red >> 8;
@@ -833,7 +835,7 @@ xsetcolorname(int x, const char *name)
 {
 	Color ncolor;
 
-	if (!BETWEEN(x, 0, dc.collen - 1))
+	if (!BETWEEN(x, 0, dc.collen))
 		return 1;
 
 	if (!xloadcolor(x, name, &ncolor))
@@ -1642,6 +1644,8 @@ xsettitle(char *p)
 int
 xstartdraw(void)
 {
+	if (IS_SET(MODE_VISIBLE))
+		XCopyArea(xw.dpy, xw.win, xw.buf, dc.gc, 0, 0, win.w, win.h, 0, 0);
 	return IS_SET(MODE_VISIBLE);
 }
 
